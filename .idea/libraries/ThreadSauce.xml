@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="ThreadSauce">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../ThreadSauce/out/artifacts/ThreadSauce_jar/ThreadSauce.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
