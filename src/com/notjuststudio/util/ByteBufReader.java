@@ -24,6 +24,6 @@ public class ByteBufReader extends InputStream {
 
     @Override
     public int available() throws IOException {
-        return buffer.capacity() - buffer.readerIndex();
+        return buffer.writerIndex() - buffer.readerIndex();
     }
 }

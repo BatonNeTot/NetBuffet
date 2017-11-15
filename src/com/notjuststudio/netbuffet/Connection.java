@@ -124,7 +124,7 @@ public class Connection {
 
     private void send(@NotNull final ByteBuf message) {
         if (secureBase.cryptoProtective.get()) {
-            final byte[] source = new byte[message.capacity()];
+            final byte[] source = new byte[message.writerIndex()];
             message.readBytes(source);
             final byte[] cipher = Recipe.encryptAES(secretKey, source);
             final ByteBuf result = Unpooled.buffer(cipher.length + 4);
