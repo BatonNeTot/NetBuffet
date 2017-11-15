@@ -146,8 +146,11 @@ public class Connection {
         buffer.writeByte(type);
         ByteBufUtils.writeString(key, buffer);
         final FPNTContainer container = synchronizedContainers.get(name);
-        if (container.contains(type, key))
-            FPNTDecoder.encode(new ByteBufWriter(buffer), container, type, key);
+        if (container.contains(type, key)) {
+            final ByteBufWriter writer = new ByteBufWriter(buffer);
+            FPNTDecoder.encode(writer, container, type, key);
+            writer.flush();
+        }
         send(buffer);
     }
 
