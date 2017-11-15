@@ -96,12 +96,27 @@ class HandlerManager extends ChannelInboundHandlerAdapter {
             message = input;
         }
 
-        final String key = ByteBufUtils.readString(message);
-        if (CONNECTION.handlers.containsKey(key)) {
-            final HandlerContainer handler = CONNECTION.handlers.get(key);
-            final FPNTContainer container = new FPNTContainer(CONNECTION.expanders());
-            FPNTDecoder.decode(new ByteBufReader(message), container);
-            handler.handle(CONNECTION, container);
+        if (!message.readBoolean()) {
+            final String key = ByteBufUtils.readString(message);
+            if (CONNECTION.handlers.containsKey(key)) {
+                final HandlerContainer handler = CONNECTION.handlers.get(key);
+                final FPNTContainer container = new FPNTContainer(CONNECTION.expanders());
+                FPNTDecoder.decode(new ByteBufReader(message), container);
+                handler.handle(CONNECTION, container);
+            }
+        } else {
+            final String name = ByteBufUtils.readString(message);
+            if (!CONNECTION.synchronizedContainers.containsKey(name)) {
+                CONNECTION.createContainer(name);
+            }
+            final FPNTContainer container = CONNECTION.synchronizedContainers.get(name);
+            final byte type = message.readByte();
+            final String key = ByteBufUtils.readString(message);
+            if (message.readerIndex() == message.capacity()) {
+                container.remove(type, key);
+            } else {
+                FPNTDecoder.decode(new ByteBufReader(message), container, type, key);
+            }
         }
     }
 

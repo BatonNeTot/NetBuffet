@@ -13,8 +13,14 @@ public class ByteBufUtils {
     }
 
     public static void writeString(@NotNull final String string, @NotNull final ByteBuf buffer) {
+        writeString(string, buffer, false);
+    }
+
+    public static void writeString(@NotNull final String string, @NotNull final ByteBuf buffer, @NotNull final boolean expand) {
         final byte[] source = string.getBytes();
-        buffer.capacity(buffer.capacity() + source.length + 4);
+        if (expand) {
+            buffer.capacity(buffer.capacity() + source.length + 4);
+        }
         buffer.writeInt(source.length);
         buffer.writeBytes(source);
     }

@@ -10,6 +10,7 @@ import com.notjuststudio.util.ByteBufWriter;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
@@ -24,6 +25,7 @@ public class Connection {
 
     private final Channel channel;
 
+    final Map<String, FPNTContainer> synchronizedContainers = new ConcurrentHashMap<>();
     final Map<String, HandlerContainer> handlers = new ConcurrentHashMap<>();
     HandlerConnection
             active = null,
@@ -111,22 +113,63 @@ public class Connection {
         if (!channel.isActive())
             return;
 
-        final ByteBuf buffer = Unpooled.buffer(0);
-        ByteBufUtils.writeString(target, buffer);
+        final ByteBuf buffer = Unpooled.buffer(1);
+        buffer.writeBoolean(false);
+        ByteBufUtils.writeString(target, buffer, true);
         final ByteBufWriter writer = new ByteBufWriter(buffer);
         FPNTDecoder.encode(writer, container);
         writer.flush();
+        send(buffer);
+    }
+
+    private void send(@NotNull final ByteBuf message) {
         if (secureBase.cryptoProtective.get()) {
-            final byte[] source = new byte[buffer.capacity()];
-            buffer.readBytes(source);
+            final byte[] source = new byte[message.capacity()];
+            message.readBytes(source);
             final byte[] cipher = Recipe.encryptAES(secretKey, source);
             final ByteBuf result = Unpooled.buffer(cipher.length + 4);
             result.writeInt(cipher.length);
             result.writeBytes(cipher);
             channel.writeAndFlush(result);
         } else {
-            channel.writeAndFlush(buffer);
+            channel.writeAndFlush(message);
         }
+    }
+
+    private void send(@NotNull final String name, @NotNull final byte type, @NotNull final String key) {
+        final byte[] nameSource = name.getBytes();
+        final byte[] keySource = key.getBytes();
+        final ByteBuf buffer = Unpooled.buffer(nameSource.length + keySource.length + 13);
+
+        buffer.writeBoolean(true);
+        ByteBufUtils.writeString(name, buffer);
+        buffer.writeByte(type);
+        ByteBufUtils.writeString(key, buffer);
+        final FPNTContainer container = synchronizedContainers.get(name);
+        if (container.contains(type, key))
+            FPNTDecoder.encode(new ByteBufWriter(buffer), container, type, key);
+        send(buffer);
+    }
+
+    void createContainer(@NotNull final String name) {
+        final FPNTContainer newContainer = new FPNTContainer();
+
+        synchronizedContainers.put(name, newContainer);
+
+        newContainer.addHandler((container, type, key, old, value) -> {
+            for (Map.Entry<String, FPNTContainer> entry : synchronizedContainers.entrySet()) {
+                if (entry.getValue() == newContainer) {
+                    send(entry.getKey(), type, key);
+                    break;
+                }
+            }
+        });
+    }
+
+    public FPNTContainer getContainer(@NotNull final String name) {
+        if (!synchronizedContainers.containsKey(name))
+            createContainer(name);
+        return synchronizedContainers.get(name);
     }
 
 }

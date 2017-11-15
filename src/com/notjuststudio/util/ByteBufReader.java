@@ -2,6 +2,7 @@ package com.notjuststudio.util;
 
 import io.netty.buffer.ByteBuf;
 
+import java.io.IOException;
 import java.io.InputStream;
 
 public class ByteBufReader extends InputStream {
@@ -19,5 +20,10 @@ public class ByteBufReader extends InputStream {
         } catch (IndexOutOfBoundsException e) {
             return -1;
         }
+    }
+
+    @Override
+    public int available() throws IOException {
+        return buffer.capacity() - buffer.readerIndex();
     }
 }
