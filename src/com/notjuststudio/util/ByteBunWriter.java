@@ -1,18 +1,18 @@
 package com.notjuststudio.util;
 
-import io.netty.buffer.ByteBuf;
+import com.notjuststudio.bytebun.ByteBun;
 
 import java.io.OutputStream;
 
-public class ByteBufWriter extends OutputStream {
+public class ByteBunWriter  extends OutputStream {
 
-    private final ByteBuf target;
+    private final ByteBun target;
 
     private int count = 0;
     private final int size = 8192;
     private final byte[] buffer = new byte[size];
 
-    public ByteBufWriter(ByteBuf buffer) {
+    public ByteBunWriter(ByteBun buffer) {
         this.target = buffer;
     }
 

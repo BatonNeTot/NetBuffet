@@ -1,18 +1,16 @@
 package com.notjuststudio.netbuffet;
 
+import com.notjuststudio.bytebun.ByteBun;
 import com.notjuststudio.fpnt.FPNTContainer;
 import com.notjuststudio.fpnt.FPNTDecoder;
 import com.notjuststudio.secretingredient.Recipe;
-import com.notjuststudio.util.ByteBufReader;
-import com.notjuststudio.util.ByteBufUtils;
+import com.notjuststudio.util.ByteBunReader;
+import com.notjuststudio.util.ByteBunUtils;
 import com.sun.istack.internal.NotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-
-import javax.crypto.SecretKey;
-import java.math.BigInteger;
 
 class HandlerManager extends ChannelInboundHandlerAdapter {
 
@@ -50,7 +48,7 @@ class HandlerManager extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        final ByteBuf input = (ByteBuf) msg;
+        final ByteBun input = ByteBunUtils.createBun((ByteBuf) msg);
 
         if (!CONNECTION.wasInitialized.get()) {
             if (CONNECTION.secureBase instanceof Server) {
@@ -84,38 +82,38 @@ class HandlerManager extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        final ByteBuf message;
+        final ByteBun message;
 
         if (CONNECTION.secureBase.cryptoProtective.get()) {
             final byte[] source = new byte[input.readInt()];
             input.readBytes(source);
             final byte[] result = Recipe.decryptAES(CONNECTION.secretKey, source);
-            message = Unpooled.buffer(result.length);
+            message = ByteBun.allocate(result.length);
             message.writeBytes(result);
         } else {
             message = input;
         }
 
         if (!message.readBoolean()) {
-            final String key = ByteBufUtils.readString(message);
+            final String key = ByteBunUtils.readString(message);
             if (CONNECTION.handlers.containsKey(key)) {
                 final HandlerContainer handler = CONNECTION.handlers.get(key);
                 final FPNTContainer container = new FPNTContainer(CONNECTION.expanders());
-                FPNTDecoder.decode(new ByteBufReader(message), container);
+                FPNTDecoder.decode(new ByteBunReader(message), container);
                 handler.handle(CONNECTION, container);
             }
         } else {
-            final String name = ByteBufUtils.readString(message);
+            final String name = ByteBunUtils.readString(message);
             if (!CONNECTION.synchronizedContainers.containsKey(name)) {
                 CONNECTION.createContainer(name);
             }
             final FPNTContainer container = CONNECTION.synchronizedContainers.get(name);
             final byte type = message.readByte();
-            final String key = ByteBufUtils.readString(message);
+            final String key = ByteBunUtils.readString(message);
             if (message.readerIndex() == message.capacity()) {
                 container.remove(type, key);
             } else {
-                FPNTDecoder.decode(new ByteBufReader(message), container, type, key);
+                FPNTDecoder.decode(new ByteBunReader(message), container, type, key);
             }
         }
     }

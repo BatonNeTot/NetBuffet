@@ -1,17 +1,15 @@
 package com.notjuststudio.netbuffet;
 
+import com.notjuststudio.bytebun.ByteBun;
 import com.notjuststudio.fpnt.FPNTContainer;
 import com.notjuststudio.fpnt.FPNTDecoder;
 import com.notjuststudio.fpnt.FPNTExpander;
 import com.notjuststudio.secretingredient.Recipe;
 import com.notjuststudio.threadsauce.LockBoolean;
-import com.notjuststudio.util.ByteBufUtils;
-import com.notjuststudio.util.ByteBufWriter;
+import com.notjuststudio.util.ByteBunUtils;
+import com.notjuststudio.util.ByteBunWriter;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
 
@@ -113,41 +111,41 @@ public class Connection {
         if (!channel.isActive())
             return;
 
-        final ByteBuf buffer = Unpooled.buffer(1);
+        final ByteBun buffer = ByteBun.allocate(1);
         buffer.writeBoolean(false);
-        ByteBufUtils.writeString(target, buffer, true);
-        final ByteBufWriter writer = new ByteBufWriter(buffer);
+        ByteBunUtils.writeString(target, buffer, true);
+        final ByteBunWriter writer = new ByteBunWriter(buffer);
         FPNTDecoder.encode(writer, container);
         writer.flush();
         send(buffer);
     }
 
-    private void send(@NotNull final ByteBuf message) {
+    private void send(@NotNull final ByteBun message) {
         if (secureBase.cryptoProtective.get()) {
             final byte[] source = new byte[message.writerIndex()];
             message.readBytes(source);
             final byte[] cipher = Recipe.encryptAES(secretKey, source);
-            final ByteBuf result = Unpooled.buffer(cipher.length + 4);
+            final ByteBun result = ByteBun.allocate(cipher.length + 4);
             result.writeInt(cipher.length);
             result.writeBytes(cipher);
-            channel.writeAndFlush(result);
+            channel.writeAndFlush(ByteBunUtils.createBuf(result));
         } else {
-            channel.writeAndFlush(message);
+            channel.writeAndFlush(ByteBunUtils.createBuf(message));
         }
     }
 
     private void send(@NotNull final String name, @NotNull final byte type, @NotNull final String key) {
         final byte[] nameSource = name.getBytes();
         final byte[] keySource = key.getBytes();
-        final ByteBuf buffer = Unpooled.buffer(nameSource.length + keySource.length + 13);
+        final ByteBun buffer = ByteBun.allocate(nameSource.length + keySource.length + 10);
 
         buffer.writeBoolean(true);
-        ByteBufUtils.writeString(name, buffer);
+        ByteBunUtils.writeString(name, buffer);
         buffer.writeByte(type);
-        ByteBufUtils.writeString(key, buffer);
+        ByteBunUtils.writeString(key, buffer);
         final FPNTContainer container = synchronizedContainers.get(name);
         if (container.contains(type, key)) {
-            final ByteBufWriter writer = new ByteBufWriter(buffer);
+            final ByteBunWriter writer = new ByteBunWriter(buffer);
             FPNTDecoder.encode(writer, container, type, key);
             writer.flush();
         }

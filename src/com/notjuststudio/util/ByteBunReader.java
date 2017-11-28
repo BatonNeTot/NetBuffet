@@ -1,15 +1,15 @@
 package com.notjuststudio.util;
 
-import io.netty.buffer.ByteBuf;
+import com.notjuststudio.bytebun.ByteBun;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-public class ByteBufReader extends InputStream {
+public class ByteBunReader extends InputStream {
 
-    private final ByteBuf buffer;
+    private final ByteBun buffer;
 
-    public ByteBufReader(ByteBuf buffer) {
+    public ByteBunReader(ByteBun buffer) {
         this.buffer = buffer;
     }
 
