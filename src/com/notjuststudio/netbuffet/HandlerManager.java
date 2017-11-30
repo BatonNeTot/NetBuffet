@@ -28,8 +28,7 @@ class HandlerManager extends ChannelInboundHandlerAdapter {
             if (CONNECTION.secureBase instanceof Server) {
                 final Server server = (Server) CONNECTION.secureBase;
                 final byte[] publicKey = server.keyPair.getPublic().getEncoded();
-                final ByteBuf key = Unpooled.buffer(publicKey.length + 4);
-                key.writeInt(publicKey.length);
+                final ByteBuf key = Unpooled.buffer(publicKey.length);
                 key.writeBytes(publicKey);
                 ctx.writeAndFlush(key);
             }
@@ -53,7 +52,7 @@ class HandlerManager extends ChannelInboundHandlerAdapter {
         if (!CONNECTION.wasInitialized.get()) {
             if (CONNECTION.secureBase instanceof Server) {
                 final Server server = (Server) CONNECTION.secureBase;
-                final byte[] cipher = new byte[input.readInt()];
+                final byte[] cipher = new byte[input.writerIndex()];
                 input.readBytes(cipher);
                 final byte[] key = Recipe.decryptRSA(server.keyPair.getPrivate(), cipher);
                 CONNECTION.secretKey = Recipe.createAESKey(key);
@@ -63,12 +62,11 @@ class HandlerManager extends ChannelInboundHandlerAdapter {
             } else {
                 final Client client = (Client) CONNECTION.secureBase;
                 CONNECTION.secretKey = Recipe.generateAESKey();
-                final byte[] publicKey = new byte[input.readInt()];
+                final byte[] publicKey = new byte[input.writerIndex()];
                 input.readBytes(publicKey);
 
                 final byte[] key = Recipe.encryptRSA(Recipe.createRSAPublicKey(publicKey), CONNECTION.secretKey.getEncoded());
-                final ByteBuf answer = Unpooled.buffer(key.length + 4);
-                answer.writeInt(key.length);
+                final ByteBuf answer = Unpooled.buffer(key.length);
                 answer.writeBytes(key);
                 ctx.writeAndFlush(answer);
 
@@ -85,7 +83,7 @@ class HandlerManager extends ChannelInboundHandlerAdapter {
         final ByteBun message;
 
         if (CONNECTION.secureBase.cryptoProtective.get()) {
-            final byte[] source = new byte[input.readInt()];
+            final byte[] source = new byte[input.writerIndex()];
             input.readBytes(source);
             final byte[] result = Recipe.decryptAES(CONNECTION.secretKey, source);
             message = ByteBun.allocate(result.length);

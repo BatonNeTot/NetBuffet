@@ -28,9 +28,9 @@ public class ByteBunUtils {
     }
 
     public static ByteBun createBun(@NotNull final ByteBuf buf) {
-        final ByteBun bun = ByteBun.allocate(buf.capacity());
-        final byte[] tmp = new byte[buf.capacity()];
-        buf.getBytes(0, tmp);
+        final ByteBun bun = ByteBun.allocate(buf.writerIndex());
+        final byte[] tmp = new byte[buf.writerIndex()];
+        buf.readBytes(tmp);
         bun.writeBytes(tmp);
         return bun;
     }

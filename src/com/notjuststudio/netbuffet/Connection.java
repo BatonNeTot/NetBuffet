@@ -122,11 +122,10 @@ public class Connection {
 
     private void send(@NotNull final ByteBun message) {
         if (secureBase.cryptoProtective.get()) {
-            final byte[] source = new byte[message.writerIndex()];
-            message.readBytes(source);
+            final byte[] source = new byte[message.capacity()];
+            message.getBytes(0, source);
             final byte[] cipher = Recipe.encryptAES(secretKey, source);
-            final ByteBun result = ByteBun.allocate(cipher.length + 4);
-            result.writeInt(cipher.length);
+            final ByteBun result = ByteBun.allocate(cipher.length);
             result.writeBytes(cipher);
             channel.writeAndFlush(ByteBunUtils.createBuf(result));
         } else {
