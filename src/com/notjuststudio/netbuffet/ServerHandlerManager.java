@@ -14,16 +14,22 @@ class ServerHandlerManager extends HandlerManager {
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        if (SERVER.count.incrementIf((value) -> SERVER.threshold.get() == 0 || value < SERVER.threshold.get())) {
-            SERVER.CONNECTIONS.add(CONNECTION);
-        } else {
-            ctx.close();
-        }
+        SERVER.count.ifDoElse((value) -> SERVER.threshold.get() == 0 || value < SERVER.threshold.get(),
+                value -> {
+                    SERVER.CONNECTIONS.add(CONNECTION);
+                    return value;
+                },
+                value -> {
+                    ctx.close();
+                    return value;
+                });
     }
 
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-        SERVER.CONNECTIONS.remove(CONNECTION);
-        SERVER.count.decrement();
+        SERVER.count.doWith(value -> {
+            SERVER.CONNECTIONS.remove(CONNECTION);
+            return --value;
+        });
     }
 }
